@@ -15,7 +15,7 @@ export default function About() {
                 transition={{ duration: 0.8 }}
                 viewport={{ once: true }}
                 className="relative rounded-3xl w-full aspect-[4/5] object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                src="img/raul.jpg"
+                src="/img/raul.jpg"
                 alt="Raúl Piqueras"
                 referrerPolicy="no-referrer"
               />
