@@ -47,5 +47,27 @@ export function useProjects() {
     return { error: null };
   };
 
-  return { projects, loading, error, fetchProjects, createProject, updateProject, deleteProject };
+  const uploadImage = async (file: File): Promise<{ url: string | null; error: string | null }> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `project-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('portfolio-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('portfolio-images')
+        .getPublicUrl(filePath);
+
+      return { url: data.publicUrl, error: null };
+    } catch (err: any) {
+      return { url: null, error: err.message };
+    }
+  };
+
+  return { projects, loading, error, fetchProjects, createProject, updateProject, deleteProject, uploadImage };
 }

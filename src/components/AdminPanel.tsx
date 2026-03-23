@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard, FolderHeart, Plus, LogOut, Search,
   ChevronLeft, ChevronRight, Pencil, Trash2, X, Loader2,
-  CheckCircle, AlertCircle, ExternalLink, ImageIcon
+  CheckCircle, AlertCircle, ExternalLink, Image as ImageIcon, Upload
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useProjects } from "../hooks/useProjects";
@@ -87,11 +87,12 @@ const EMPTY_FORM: ProjectInsert = {
   status: 'published',
 };
 
-function ProjectModal({ project, onSave, onClose, loading }: {
+function ProjectModal({ project, onSave, onClose, loading, uploadImage }: {
   project: Project | null;
-  onSave: (data: ProjectInsert) => Promise<void>;
+  onSave: (data: ProjectInsert, imageFile?: File | null) => Promise<void>;
   onClose: () => void;
   loading: boolean;
+  uploadImage: (file: File) => Promise<{ url: string | null; error: string | null }>;
 }) {
   const isEdit = project !== null;
   const [form, setForm] = useState<ProjectInsert>(
@@ -101,6 +102,19 @@ function ProjectModal({ project, onSave, onClose, loading }: {
   );
   const [tagsInput, setTagsInput] = useState(project?.tags.join(', ') ?? '');
   const [formError, setFormError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(project?.image_url || null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      setForm({ ...form, image_url: '' }); // Limpiar URL manual si sube archivo
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -110,7 +124,21 @@ function ProjectModal({ project, onSave, onClose, loading }: {
     }
     setFormError(null);
     const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
-    await onSave({ ...form, tags });
+    
+    let finalImageUrl = form.image_url;
+    
+    if (imageFile) {
+      setUploading(true);
+      const { url, error } = await uploadImage(imageFile);
+      setUploading(false);
+      if (error) {
+        setFormError('Error al subir la imagen: ' + error);
+        return;
+      }
+      finalImageUrl = url || '';
+    }
+
+    await onSave({ ...form, tags, image_url: finalImageUrl });
   };
 
   return (
@@ -186,24 +214,65 @@ function ProjectModal({ project, onSave, onClose, loading }: {
             />
           </div>
 
-          {/* URL imagen */}
-          <div>
+          {/* Imagen del proyecto */}
+          <div className="space-y-4">
             <label className="font-label text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2 block">
-              URL de Imagen
+              Imagen del Proyecto
             </label>
-            <div className="relative">
-              <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-              <input
-                type="url"
-                value={form.image_url || ''}
-                onChange={e => setForm({ ...form, image_url: e.target.value })}
-                placeholder="https://..."
-                className="w-full bg-white/5 border border-white/10 focus:border-primary/50 rounded-lg px-4 py-3 pl-12 font-body text-white placeholder:text-white/20 outline-none transition-colors"
-              />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Opción Subir Archivo */}
+              <div className="relative group">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-xl hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all gap-2"
+                >
+                  <Upload className="w-6 h-6 text-white/30 group-hover:text-primary transition-colors" />
+                  <span className="text-xs font-body text-white/40 group-hover:text-white transition-colors">
+                    {imageFile ? imageFile.name : "Subir desde el ordenador"}
+                  </span>
+                </label>
+              </div>
+
+              {/* Opción URL (por si acaso) */}
+              <div className="flex flex-col justify-center gap-2">
+                <div className="relative">
+                  <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <input
+                    type="url"
+                    value={form.image_url || ''}
+                    onChange={e => {
+                      setForm({ ...form, image_url: e.target.value });
+                      setImageFile(null);
+                      setPreviewUrl(e.target.value);
+                    }}
+                    placeholder="O pega una URL..."
+                    className="w-full bg-white/5 border border-white/10 focus:border-primary/50 rounded-lg px-4 py-3 pl-12 font-body text-white placeholder:text-white/20 outline-none transition-colors text-xs"
+                  />
+                </div>
+                <p className="text-[10px] text-white/20 font-body italic italic px-1">Se recomienda subir archivo para mejor rendimiento.</p>
+              </div>
             </div>
-            {form.image_url && (
-              <div className="mt-3 rounded-lg overflow-hidden h-32 bg-white/5">
-                <img src={form.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+
+            {previewUrl && (
+              <div className="mt-4 relative rounded-xl overflow-hidden h-48 bg-white/5 border border-white/5 group">
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button 
+                    type="button"
+                    onClick={() => { setImageFile(null); setPreviewUrl(null); setForm({...form, image_url: ''}); }}
+                    className="bg-red-500 text-white p-2 rounded-full hover:scale-110 transition-transform"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -258,11 +327,11 @@ function ProjectModal({ project, onSave, onClose, loading }: {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="flex-1 primary-gradient text-black py-3 rounded-lg font-headline font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {isEdit ? 'Guardar Cambios' : 'Crear Proyecto'}
+              {(loading || uploading) ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {uploading ? 'Subiendo imagen...' : (isEdit ? 'Guardar Cambios' : 'Crear Proyecto')}
             </button>
           </div>
         </form>
@@ -283,7 +352,7 @@ const PAGE_SIZE = 8;
 
 export default function AdminPanel({ onBack }: { onBack: () => void }) {
   const { user, signOut } = useAuth();
-  const { projects, loading, createProject, updateProject, deleteProject } = useProjects();
+  const { projects, loading, createProject, updateProject, deleteProject, uploadImage } = useProjects();
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -561,6 +630,7 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
             onSave={handleCreate}
             onClose={() => setModal(null)}
             loading={actionLoading}
+            uploadImage={uploadImage}
           />
         )}
         {modal === 'edit' && selectedProject && (
@@ -569,6 +639,7 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
             onSave={handleEdit}
             onClose={() => { setModal(null); setSelectedProject(null); }}
             loading={actionLoading}
+            uploadImage={uploadImage}
           />
         )}
         {modal === 'delete' && selectedProject && (
