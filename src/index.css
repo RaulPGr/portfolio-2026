@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-label: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  --color-surface: #05050a;
+  --color-primary: #b0c6ff;
+  --color-secondary: #66d9cc;
+  --color-accent-purple: #8b5cf6;
+  --color-deep-blue: #0f172a;
+  --color-deep-purple: #1e1b4b;
+  --color-deep-green: #064e3b;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+@layer base {
+  body {
+    @apply bg-[#05050a] text-[#e5e2e1] overflow-x-hidden font-body;
+  }
+}
+
+.cinematic-scene {
+  @apply min-h-screen w-full relative flex flex-col justify-center overflow-hidden py-20;
+  background: radial-gradient(circle at 50% 50%, rgba(30, 27, 75, 0.4) 0%, rgba(5, 5, 10, 1) 100%);
+}
+
+.atmospheric-overlay {
+  @apply absolute inset-0 pointer-events-none;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 27, 75, 0.8) 50%, rgba(6, 78, 59, 0.6) 100%);
+}
+
+.glow-element {
+  @apply absolute blur-[120px] rounded-full opacity-20 pointer-events-none;
+}
+
+.scene-container {
+  @apply relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-[8.5rem];
+}
+
+.glass-panel {
+  @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-8;
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, #b0c6ff 0%, #002c6e 100%);
+}
